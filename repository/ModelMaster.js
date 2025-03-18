@@ -75,6 +75,38 @@ function to retrieve back your result
     });
   }
 
+
+  static selectLimitToOne(tableName) {
+    return new Promise(function(resolve, reject) {
+      con.query("SELECT * FROM " + tableName + " WHERE HasBeenFetched = 0 LIMIT 1;", function(
+          err,
+          result,
+          fields
+      ) {
+        if (err) {
+          reject(err);
+        } else {
+          var returned_value_ = result;
+          resolve(returned_value_);
+        }
+      });
+    });
+  }
+
+
+  static updateHasBeenFetched(QID) {
+    return new Promise(function(resolve, reject) {
+      const query = "UPDATE hha_dews SET HasBeenFetched = 1 WHERE QID = ?;";
+      con.query(query, [QID], function(err, result) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result);
+        }
+      });
+    });
+  }
+
   /*SON/2018-11-06 00:29 - DEVELOPMENT
 	
 The selectSpecific() is to select specific a

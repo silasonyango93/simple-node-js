@@ -39,6 +39,21 @@ module.exports = class SessionLogsController {
     });
   }
 
+  static get_all_records_limit_1() {
+    return new Promise(function(resolve, reject) {
+      var myPromise = HhaRepository.get_all_records_limit_1();
+
+      myPromise.then(
+          function(result) {
+            resolve(result);
+          },
+          function(err) {
+            reject(err);
+          }
+      );
+    });
+  }
+
   static get_specific_records(ColumnName, value_) {
     return new Promise(function(resolve, reject) {
       var myPromise = HhaRepository.get_specific_records(ColumnName, value_);
@@ -76,6 +91,21 @@ module.exports = class SessionLogsController {
           value_,
           jsonObject_
       );
+
+      myPromise.then(
+          function(result) {
+            resolve(result);
+          },
+          function(err) {
+            reject(err);
+          }
+      );
+    });
+  }
+
+  static updateHasBeenFetched(QID) {
+    return new Promise(function(resolve, reject) {
+      var myPromise = HhaRepository.updateHasBeenFetched(QID)
 
       myPromise.then(
           function(result) {

@@ -42,6 +42,20 @@ module.exports = class SessionLogsModel {
     });
   }
 
+  static get_all_records_limit_1() {
+    return new Promise(function(resolve, reject) {
+      var myPromise = ModelMaster.selectLimitToOne(TableName);
+      myPromise.then(
+          function(result) {
+            resolve(result);
+          },
+          function(err) {
+            reject(err);
+          }
+      );
+    });
+  }
+
   static get_specific_records(ColumnName, value_) {
     return new Promise(function(resolve, reject) {
       var myPromise = ModelMaster.selectSpecific(TableName, ColumnName, value_);
@@ -78,6 +92,20 @@ module.exports = class SessionLogsModel {
           ColumnName,
           value_
       );
+      myPromise.then(
+          function(result) {
+            resolve(result);
+          },
+          function(err) {
+            reject(err);
+          }
+      );
+    });
+  }
+
+  static updateHasBeenFetched(QID) {
+    return new Promise(function(resolve, reject) {
+      var myPromise = ModelMaster.updateHasBeenFetched(QID);
       myPromise.then(
           function(result) {
             resolve(result);

@@ -10,9 +10,12 @@ const router = express.Router();
 const bodyParser = require("body-parser");
 var urlencodedParser = bodyParser.urlencoded({ extended: false });
 const HhaService = require("../service/HhaService");
+const { connectRabbitMQ } = require("../rabbitmq");
+let rabbitChannel;
 
 //Middle ware that is specific to this router
 router.use(function timeLog(req, res, next) {
+
   next();
 });
 
@@ -40,210 +43,46 @@ router.post("/add_session_logs", urlencodedParser, function(request, response) {
   );
 });
 
-router.post("/get_all_session_logs", urlencodedParser, function(
-    request,
-    response
-) {
-  var myPromise = HhaService.get_all_records();
-
-  myPromise.then(
-      function(result) {
-        var response_object = { results: result };
-        response.send(response_object);
-      },
-      function(err) {
-        console.log(err);
-        response.send("An error occurred");
-      }
-  );
+router.get('/fetch_all_records',urlencodedParser, async (request,response) => {
+  let result = await HhaService.get_all_records();
+  response.send(result);
 });
 
-router.post("/get_specific_session_logs", urlencodedParser, function(
-    request,
-    response
-) {
-  var mKey = request.body.column_name;
-  //var mValue=parseInt(request.query.search_value, 10);
-  var mValue = request.body.search_value;
+router.get('/fetch_all_records_limit_1', urlencodedParser, async (request, response) => {
+  try {
+    let result;
 
-  var myPromise = HhaService.get_specific_records(mKey, mValue);
+    // Ensure RabbitMQ connection is established before processing records
+    const rabbitMQ = await connectRabbitMQ();
+    if (!rabbitMQ || !rabbitMQ.channel) {
+      throw new Error("Failed to establish RabbitMQ connection.");
+    }
+    rabbitChannel = rabbitMQ.channel; // Assign the channel after successful connection
 
-  myPromise.then(
-      function(result) {
-        var response_object = { results: result };
-        response.send(response_object);
-      },
-      function(err) {
-        response.send("An error occurred");
-        console.log(err);
+    do {
+      result = await HhaService.get_all_records_limit_1(); // Fetch new record
+
+      if (result.length > 0) {
+        let questionnaire = result[0];
+
+        await HhaService.updateHasBeenFetched(questionnaire.QID);
+
+        const queue = "hha_ingestion_queue";
+
+        await rabbitChannel.assertQueue(queue, { durable: true });
+        rabbitChannel.sendToQueue(queue, Buffer.from(JSON.stringify(questionnaire)), {
+          persistent: true,
+        });
       }
-  );
+
+    } while (result.length > 0); // Keep looping while records exist
+
+    response.send({ message: "All records fetched and updated." });
+  } catch (error) {
+    console.error("Error in fetch_all_records_limit_1:", error);
+    response.status(500).send({ error: "Internal Server Error" });
+  }
 });
 
-router.post("/update_session_logs", urlencodedParser, function(
-    request,
-    response
-) {
-  var jsonObject_ = {
-    UserId: request.body.UserId,
-    SessionStartDate: request.body.SessionStartDate,
-    SessionEndDate: request.body.SessionEndDate,
-    TermId: request.body.TermId,
-    ActualWeekId: request.body.ActualWeekId,
-    SessionYear: request.body.SessionYear
-  };
-
-  var myPromise = HhaService.batch_update(jsonObject_);
-
-  myPromise.then(
-      function(result) {
-        var response_object = { results: result };
-        response.send(response_object);
-      },
-      function(err) {
-        response.send("An error occurred");
-        console.log(err);
-      }
-  );
-});
-
-router.post("/update_individual_session_logs", urlencodedParser, function(
-    request,
-    response
-) {
-  var date = new Date();
-  date.setHours(date.getHours() + 0);
-  var column_name = request.body.ColumnName;
-  var value_ = request.body.ColumnValue;
-
-  var jsonObject_ = {
-    SessionEndDate: date
-  };
-
-  var myPromise = HhaService.individual_record_update(
-      column_name,
-      value_,
-      jsonObject_
-  );
-
-  myPromise.then(
-      function(result) {
-        var response_object = { results: result };
-        response.send(response_object);
-      },
-      function(err) {
-        response.send("An error occurred");
-        console.log(err);
-      }
-  );
-});
-
-router.post("/delete_individual_session_logs", urlencodedParser, function(
-    request,
-    response
-) {
-  var column_name = request.body.column_name;
-  //var mValue=parseInt(request.body.search_value, 10);
-  var value_ = request.body.search_value;
-
-  var UserIdColumnName = request.body.UserIdColumnName;
-
-  var UserId = request.body.UserId;
-
-  var myPromise = HhaService.delete_user_specic_record(
-      column_name,
-      value_,
-      UserIdColumnName,
-      UserId
-  );
-
-  myPromise.then(
-      function(result) {
-        var response_object = { results: result };
-        response.send(response_object);
-      },
-      function(err) {
-        response.send("An error occurred");
-        console.log(err);
-      }
-  );
-});
-
-router.post("/get_number_of_session_logs_records", urlencodedParser, function(
-    request,
-    response
-) {
-  var column_name = request.body.column_name;
-  //var mValue=parseInt(request.body.search_value, 10);
-  var value_ = request.body.search_value;
-
-  var myPromise = HhaService.get_number_of_records(
-      column_name,
-      value_
-  );
-
-  myPromise.then(
-      function(result) {
-        var response_object = { results: result };
-        response.send(response_object);
-      },
-      function(err) {
-        response.send("An error occurred");
-        console.log(err);
-      }
-  );
-});
-
-router.post("/session_logs_user_specific_query", urlencodedParser, function(
-    request,
-    response
-) {
-  var ColumnName = request.body.ColumnName;
-  //var mValue=parseInt(request.body.search_value, 10);
-  var value_ = request.body.value_;
-
-  var UserIdColumnName = request.body.UserIdColumnName;
-
-  var UserId = request.body.UserId;
-
-  var myPromise = HhaService.user_specific_select_query(
-      ColumnName,
-      value_,
-      UserIdColumnName,
-      UserId
-  );
-
-  myPromise.then(
-      function(result) {
-        var response_object = { results: result };
-        response.send(response_object);
-      },
-      function(err) {
-        response.send("An error occurred");
-        console.log(err);
-      }
-  );
-});
-
-
-router.post("/get_user_by_session_log", urlencodedParser, function(
-    request,
-    response
-) {
-  var sessionLogId = request.body.sessionLogId;
-
-  var myPromise = HhaService.getUserBySessionLogId(sessionLogId);
-
-  myPromise.then(
-      function(result) {
-        var response_object = { results: result };
-        response.send(response_object);
-      },
-      function(err) {
-        response.send("An error occurred");
-        console.log(err);
-      }
-  );
-});
 
 module.exports = router;

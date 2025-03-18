@@ -16,6 +16,7 @@ const upload = multer({ dest: __dirname + "/uploads/" });
 var dbcredentials;
 var cors = require("cors");
 var port = process.env.PORT || 5001;
+const { connectRabbitMQ } = require("./rabbitmq");
 
 app.use(cors());
 dbcredentials = {
