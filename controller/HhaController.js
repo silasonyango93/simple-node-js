@@ -44,7 +44,7 @@ router.post("/add_session_logs", urlencodedParser, function(request, response) {
 });
 
 router.get('/fetch_all_records',urlencodedParser, async (request,response) => {
-  let result = await HhaService.get_all_records();
+  let result = await HhaService.get_all_records_limit_1();
   response.send(result);
 });
 
