@@ -56,9 +56,9 @@ module.exports = class SessionLogsModel {
     });
   }
 
-  static get_all_records_limit_1() {
+  static get_all_milk_records_limit_1() {
     return new Promise(function(resolve, reject) {
-      var myPromise = ModelMaster.selectLimitToOne(TableName);
+      var myPromise = ModelMaster.selectLimitToOne("milk_production_dews");
       myPromise.then(
           function(result) {
             resolve(result);
@@ -120,6 +120,20 @@ module.exports = class SessionLogsModel {
   static updateHasBeenFetched(QID) {
     return new Promise(function(resolve, reject) {
       var myPromise = ModelMaster.updateHasBeenFetched(QID);
+      myPromise.then(
+          function(result) {
+            resolve(result);
+          },
+          function(err) {
+            reject(err);
+          }
+      );
+    });
+  }
+
+  static updateMilkHasBeenFetched(QID) {
+    return new Promise(function(resolve, reject) {
+      var myPromise = ModelMaster.updateMilkHasBeenFetched(QID);
       myPromise.then(
           function(result) {
             resolve(result);

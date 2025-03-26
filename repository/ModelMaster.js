@@ -107,6 +107,19 @@ function to retrieve back your result
     });
   }
 
+  static updateMilkHasBeenFetched(QID) {
+    return new Promise(function(resolve, reject) {
+      const query = "UPDATE milk_production_dews SET HasBeenFetched = 1 WHERE QID = ?;";
+      con.query(query, [QID], function(err, result) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result);
+        }
+      });
+    });
+  }
+
   /*SON/2018-11-06 00:29 - DEVELOPMENT
 	
 The selectSpecific() is to select specific a

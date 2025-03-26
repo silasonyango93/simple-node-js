@@ -85,4 +85,41 @@ router.get('/fetch_all_records_limit_1', urlencodedParser, async (request, respo
 });
 
 
+router.get('/fetch_milk_records', urlencodedParser, async (request, response) => {
+  try {
+    let result;
+
+    // Ensure RabbitMQ connection is established before processing records
+    const rabbitMQ = await connectRabbitMQ();
+    if (!rabbitMQ || !rabbitMQ.channel) {
+      throw new Error("Failed to establish RabbitMQ connection.");
+    }
+    rabbitChannel = rabbitMQ.channel; // Assign the channel after successful connection
+
+    do {
+      result = await HhaService.get_milk_records_limit_1(); // Fetch new record
+
+      if (result.length > 0) {
+        let questionnaire = result[0];
+
+        await HhaService.updateMilkHasBeenFetched(questionnaire.QID);
+
+        const queue = "hha_milk_ingestion_queue";
+
+        await rabbitChannel.assertQueue(queue, { durable: true });
+        rabbitChannel.sendToQueue(queue, Buffer.from(JSON.stringify(questionnaire)), {
+          persistent: true,
+        });
+      }
+
+    } while (result.length > 0); // Keep looping while records exist
+
+    response.send({ message: "All records fetched and updated." });
+  } catch (error) {
+    console.error("Error in fetch_all_records_limit_1:", error);
+    response.status(500).send({ error: "Internal Server Error" });
+  }
+});
+
+
 module.exports = router;
